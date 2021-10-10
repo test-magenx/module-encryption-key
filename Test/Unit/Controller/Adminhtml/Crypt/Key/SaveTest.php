@@ -24,69 +24,52 @@ use PHPUnit\Framework\TestCase;
  */
 class SaveTest extends TestCase
 {
-    /**
-     * @var EncryptorInterface|MockObject
-     */
+    /** @var EncryptorInterface|MockObject */
     protected $encryptMock;
 
-    /**
-     * @var Change|MockObject
-     */
+    /** @var Change|MockObject */
     protected $changeMock;
 
-    /**
-     * @var CacheInterface|MockObject
-     */
+    /** @var CacheInterface|MockObject */
     protected $cacheMock;
 
-    /**
-     * @var RequestInterface|MockObject
-     */
+    /** @var RequestInterface|MockObject */
     protected $requestMock;
 
-    /**
-     * @var ManagerInterface|MockObject
-     */
+    /** @var ManagerInterface|MockObject */
     protected $managerMock;
 
-    /**
-     * @var ResponseInterface|MockObject
-     */
+    /** @var ResponseInterface|MockObject */
     protected $responseMock;
 
-    /**
-     * @var Save
-     */
+    /** @var Save */
     protected $model;
 
-    /**
-     * @inheritdoc
-     */
     protected function setUp(): void
     {
         $this->encryptMock = $this->getMockBuilder(EncryptorInterface::class)
             ->disableOriginalConstructor()
-            ->addMethods([])
+            ->setMethods([])
             ->getMockForAbstractClass();
         $this->changeMock = $this->getMockBuilder(Change::class)
             ->disableOriginalConstructor()
-            ->onlyMethods(['changeEncryptionKey'])
+            ->setMethods([])
             ->getMock();
         $this->cacheMock = $this->getMockBuilder(CacheInterface::class)
             ->disableOriginalConstructor()
-            ->addMethods([])
+            ->setMethods([])
             ->getMockForAbstractClass();
         $this->requestMock = $this->getMockBuilder(RequestInterface::class)
             ->disableOriginalConstructor()
-            ->addMethods(['getPost'])
+            ->setMethods(['getPost'])
             ->getMockForAbstractClass();
         $this->managerMock = $this->getMockBuilder(ManagerInterface::class)
             ->disableOriginalConstructor()
-            ->addMethods([])
+            ->setMethods([])
             ->getMockForAbstractClass();
         $this->responseMock = $this->getMockBuilder(ResponseInterface::class)
             ->disableOriginalConstructor()
-            ->addMethods(['setRedirect'])
+            ->setMethods(['setRedirect'])
             ->getMockForAbstractClass();
 
         $helper = new ObjectManager($this);
@@ -99,23 +82,26 @@ class SaveTest extends TestCase
                 'cache' => $this->cacheMock,
                 'request' => $this->requestMock,
                 'messageManager' => $this->managerMock,
-                'response' => $this->responseMock
+                'response' => $this->responseMock,
             ]
         );
     }
 
-    /**
-     * @return void
-     */
-    public function testExecuteNonRandomAndWithCryptKey(): void
+    public function testExecuteNonRandomAndWithCryptKey()
     {
         $expectedMessage = 'The encryption key has been changed.';
         $key = 1;
         $newKey = 'RSASHA9000VERYSECURESUPERMANKEY';
         $this->requestMock
+            ->expects($this->at(0))
             ->method('getPost')
-            ->withConsecutive(['generate_random'], ['crypt_key'])
-            ->willReturnOnConsecutiveCalls(0, $key);
+            ->with('generate_random')
+            ->willReturn(0);
+        $this->requestMock
+            ->expects($this->at(1))
+            ->method('getPost')
+            ->with('crypt_key')
+            ->willReturn($key);
         $this->encryptMock->expects($this->once())->method('validateKey');
         $this->changeMock->expects($this->once())->method('changeEncryptionKey')->willReturn($newKey);
         $this->managerMock->expects($this->once())->method('addSuccessMessage')->with($expectedMessage);
@@ -125,32 +111,32 @@ class SaveTest extends TestCase
         $this->model->execute();
     }
 
-    /**
-     * @return void
-     */
-    public function testExecuteNonRandomAndWithoutCryptKey(): void
+    public function testExecuteNonRandomAndWithoutCryptKey()
     {
         $key = null;
         $this->requestMock
+            ->expects($this->at(0))
             ->method('getPost')
-            ->withConsecutive(['generate_random'], ['crypt_key'])
-            ->willReturnOnConsecutiveCalls(0, $key);
+            ->with('generate_random')
+            ->willReturn(0);
+        $this->requestMock
+            ->expects($this->at(1))
+            ->method('getPost')
+            ->with('crypt_key')
+            ->willReturn($key);
         $this->managerMock->expects($this->once())->method('addErrorMessage');
 
         $this->model->execute();
     }
 
-    /**
-     * @return void
-     */
-    public function testExecuteRandom(): void
+    public function testExecuteRandom()
     {
         $newKey = 'RSASHA9000VERYSECURESUPERMANKEY';
         $this->requestMock
+            ->expects($this->at(0))
             ->method('getPost')
-            ->withConsecutive(['generate_random'])
-            ->willReturnOnConsecutiveCalls(1);
-
+            ->with('generate_random')
+            ->willReturn(1);
         $this->changeMock->expects($this->once())->method('changeEncryptionKey')->willReturn($newKey);
         $this->managerMock->expects($this->once())->method('addSuccessMessage');
         $this->managerMock->expects($this->once())->method('addNoticeMessage');
